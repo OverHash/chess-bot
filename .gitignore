@@ -1,0 +1,5 @@
+# rust generation
+/target
+
+# environment variables
+.env
