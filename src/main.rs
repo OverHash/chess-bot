@@ -1,5 +1,6 @@
 use futures::stream::StreamExt;
-use std::{env, error::Error, future::IntoFuture, sync::Arc};
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use std::{env, error::Error, future::IntoFuture, str::FromStr, sync::Arc};
 use twilight_cache_inmemory::{InMemoryCache, ResourceType};
 use twilight_gateway::{Event, Intents, Shard};
 use twilight_http::Client;
@@ -9,6 +10,16 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     dotenvy::dotenv().ok();
 
     let token = env::var("DISCORD_TOKEN")?;
+    let database_uri = env::var("DATABASE_URI")?;
+
+    let connection_options = SqliteConnectOptions::from_str(&database_uri)?.create_if_missing(true);
+    let pool = SqlitePoolOptions::new()
+        .connect_with(connection_options)
+        .await?;
+    println!(
+        "Connected to sqlite database with {} connections",
+        pool.num_idle()
+    );
 
     // Let Discord know the intentions we need to run the bot
     let intents = Intents::GUILDS | Intents::GUILD_MESSAGES | Intents::MESSAGE_CONTENT;
