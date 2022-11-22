@@ -3,3 +3,6 @@
 
 # environment variables
 .env
+
+# database-specific
+db.sqlite
