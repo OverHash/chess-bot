@@ -24,7 +24,7 @@ async fn main() -> Result<(), ApplicationError> {
         .into_report()
         .change_context(ApplicationError::LoadConfig)
         .attach(ConfigError::ParseError {
-            config_option: "DATABASE_URI".to_string(),
+            config_option: "DATABASE_URL".to_string(),
         })?
         .create_if_missing(true);
     let pool = SqlitePoolOptions::new()
