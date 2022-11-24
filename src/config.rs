@@ -28,10 +28,10 @@ where
 impl ApplicationConfig {
     pub fn load() -> Result<Self, ConfigError> {
         let discord_token = load_env("DISCORD_TOKEN")?;
-        let database_uri = load_env("DATABASE_URI")?;
+        let database_url = load_env("DATABASE_URL")?;
 
         Ok(Self {
-            database_url: database_uri,
+            database_url,
             discord_token,
         })
     }
