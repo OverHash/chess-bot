@@ -104,7 +104,7 @@ impl fmt::Display for ApplicationError {
                 DiscordError::ConnectError => write!(f, "Failed to start Discord bot"),
             },
             ApplicationError::Event => write!(f, "Failed to process event"),
-            ApplicationError::Thread => write!(f, "Failed to handle thread unwinding"),
+            ApplicationError::Thread => write!(f, "Failed to handle tokio thread unwinding"),
         }
     }
 }
