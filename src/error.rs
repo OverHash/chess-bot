@@ -34,26 +34,30 @@ pub enum DiscordError {
 }
 
 #[derive(Debug)]
-pub enum MessageCreateError {
-    /// The response message was too long
-    ContentResponseError,
-    /// Failed to reply to the user
-    ReplyMessageError,
+pub enum ReactionError {
+    /// Failed to acquire a lock on a database pool.
+    DatabaseConnect,
+    /// Failed to get the previous reaction count.
+    PreviousReactionCount,
+    /// Failed to retrieve the message reacted to.
+    RetrieveMessage,
+    /// The response message was too long.
+    ContentResponseTooLong,
+    /// Failed to reply to the user.
+    ReplyMessage,
 }
 
 /// Errors associated when handling a Discord event
 #[derive(Debug)]
 pub enum EventError {
-    /// Failed to handle an event related to message creation.
-    ///
-    /// The inner element represents a debug message to display.
-    MessageCreateError(MessageCreateError),
+    /// Failed to handle a message having a reaction event (added / removed).
+    ReactionError(ReactionError),
 }
 
 impl EventError {
     fn get_event_name(&self) -> &'static str {
         match self {
-            EventError::MessageCreateError(_) => "MessageCreate",
+            EventError::ReactionError(_) => "Reaction",
         }
     }
 }
@@ -61,11 +65,14 @@ impl EventError {
 impl fmt::Display for EventError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let event_error = match self {
-            EventError::MessageCreateError(create_error) => match create_error {
-                MessageCreateError::ContentResponseError => {
-                    "Response message exceeded maximum length"
+            EventError::ReactionError(reaction_error) => match reaction_error {
+                ReactionError::DatabaseConnect => "Failed to acquire database pool connection",
+                ReactionError::PreviousReactionCount => {
+                    "Failed to retrieve the previous reaction count"
                 }
-                MessageCreateError::ReplyMessageError => "Failed to respond to channel",
+                ReactionError::RetrieveMessage => "Failed to retrieve the message reacted to",
+                ReactionError::ContentResponseTooLong => "Response message exceeded maximum length",
+                ReactionError::ReplyMessage => "Failed to respond to channel",
             },
         };
 
