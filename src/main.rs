@@ -10,7 +10,7 @@ use twilight_gateway::{Event, Intents, Shard};
 use twilight_http::{request::channel::reaction::RequestReactionType, Client};
 use twilight_model::{
     channel::message::{
-        embed::{EmbedAuthor, EmbedField},
+        embed::{EmbedAuthor, EmbedField, EmbedImage},
         Embed, ReactionType,
     },
     id::{marker::MessageMarker, Id},
@@ -171,11 +171,15 @@ WHERE message_id = ?
                 .await
                 .expect("Failed to react");
 
+                // update the starboard message
+                // todo
+
                 return Ok(());
             }
 
             // add to starboard!
-            http.create_message(config.starboard_channel_id)
+            let starboard_message = http
+                .create_message(config.starboard_channel_id)
                 .content(&format!(
                     "{max_reactions} {} in <#{}>",
                     match &added.emoji {
@@ -225,7 +229,12 @@ WHERE message_id = ?
                     footer: None,
                     timestamp: Some(message.timestamp),
                     kind: "rich".to_string(),
-                    image: None,
+                    image: message.attachments.into_iter().next().map(|i| EmbedImage {
+                        url: i.url,
+                        proxy_url: Some(i.proxy_url),
+                        height: None,
+                        width: None,
+                    }),
                     provider: None,
                     thumbnail: None,
                     title: None,
@@ -236,7 +245,28 @@ WHERE message_id = ?
                 .change_context(EventError::ReactionError(ReactionError::StarboardMessage))?
                 .await
                 .into_report()
+                .change_context(EventError::ReactionError(ReactionError::StarboardMessage))?
+                .model()
+                .await
+                .into_report()
                 .change_context(EventError::ReactionError(ReactionError::StarboardMessage))?;
+
+            let starboard_message_id = starboard_message.id.to_string();
+
+            sqlx::query!(
+                r#"
+INSERT INTO starboard (starboard_id, message_id)
+VALUES (?, ?)
+					"#,
+                starboard_message_id,
+                message_id
+            )
+            .execute(&mut pool)
+            .await
+            .into_report()
+            .change_context(EventError::ReactionError(
+                ReactionError::PreviousReactionCount,
+            ))?;
         }
         Event::ShardConnected(e) => {
             println!("Connected on shard {}", e.shard_id);
