@@ -8,7 +8,13 @@ use std::{str::FromStr, sync::Arc};
 use twilight_cache_inmemory::{InMemoryCache, ResourceType};
 use twilight_gateway::{Event, Intents, Shard};
 use twilight_http::{request::channel::reaction::RequestReactionType, Client};
-use twilight_model::id::{marker::MessageMarker, Id};
+use twilight_model::{
+    channel::message::{
+        embed::{EmbedAuthor, EmbedField},
+        Embed, ReactionType,
+    },
+    id::{marker::MessageMarker, Id},
+};
 
 mod config;
 mod error;
@@ -134,34 +140,29 @@ WHERE message_id = ?
             }
 
             // retrieve the amount of reactions the message has now
-            // if the message was not in cache, we need to perform an http request to get it
-            let reactions = match cache.message(added.message_id) {
-                Some(m) => m.reactions().to_owned(),
-                None => {
-                    let message = http
-                        .message(added.channel_id, added.message_id)
-                        .await
-                        .into_report()
-                        .change_context(EventError::ReactionError(ReactionError::RetrieveMessage))?
-                        .model()
-                        .await
-                        .into_report()
-                        .change_context(EventError::ReactionError(
-                            ReactionError::RetrieveMessage,
-                        ))?;
-
-                    message.reactions
-                }
-            };
+            let message = http
+                .message(added.channel_id, added.message_id)
+                .await
+                .into_report()
+                .change_context(EventError::ReactionError(ReactionError::RetrieveMessage))?
+                .model()
+                .await
+                .into_report()
+                .change_context(EventError::ReactionError(ReactionError::RetrieveMessage))?;
 
             // check if we are above the config `reaction_requirement` threshold
             // if not, early exit
-            let max_reactions = reactions.iter().map(|r| r.count).max().unwrap_or_default();
-            if max_reactions < config.reaction_requirement.into() {
-                println!(
-                    "message {message_id} has {max_reactions} max reactions for a single emoji now"
-                );
+            let max_reactions = message
+                .reactions
+                .iter()
+                .map(|r| r.count)
+                .max()
+                .unwrap_or_default();
+            println!(
+                "message {message_id} has {max_reactions} max reactions for a single emoji now"
+            );
 
+            if max_reactions < config.reaction_requirement.into() {
                 http.create_reaction(
                     added.channel_id,
                     added.message_id,
@@ -174,20 +175,68 @@ WHERE message_id = ?
             }
 
             // add to starboard!
-            // todo
-            http.create_message(added.channel_id)
+            http.create_message(config.starboard_channel_id)
                 .content(&format!(
-                    "added reaction {:?}, which now has {reactions:?} unique emoji reactions",
-                    added.emoji
+                    "{max_reactions} {} in <#{}>",
+                    match &added.emoji {
+                        ReactionType::Unicode { name } => name.to_owned(),
+                        ReactionType::Custom { id, name, .. } =>
+                            format!("<:{}:{id}>", name.as_deref().unwrap_or_default()),
+                    },
+                    added.channel_id
                 ))
                 .into_report()
                 .change_context(EventError::ReactionError(
                     ReactionError::ContentResponseTooLong,
                 ))?
-                .reply(added.message_id)
+                .embeds(&[Embed {
+                    author: Some(EmbedAuthor {
+                        icon_url: Some(match message.author.avatar {
+                            Some(hash) => format!(
+                                "https://cdn.discordapp.com/avatars/{}/{}.{}",
+                                message.author.id,
+                                hash,
+                                if hash.is_animated() { "gif" } else { "webp" }
+                            ),
+                            None => format!(
+                                "https://cdn.discordapp.com/embed/avatars/{}.png",
+                                message.author.discriminator % 5
+                            ),
+                        }),
+                        name: message.author.name,
+                        proxy_icon_url: None,
+                        url: None,
+                    }),
+                    color: Some(15844367),
+                    description: Some(message.content),
+                    fields: vec![EmbedField {
+                        inline: false,
+                        name: "Message Link".to_string(),
+                        value: format!(
+                            "[Click to jump to message](https://discord.com/channels/{}/{}/{})",
+                            match message.guild_id {
+                                Some(guild_id) => guild_id.to_string(),
+                                None => "@me".to_string(),
+                            },
+                            message.channel_id,
+                            message.id
+                        ),
+                    }],
+                    footer: None,
+                    timestamp: Some(message.timestamp),
+                    kind: "rich".to_string(),
+                    image: None,
+                    provider: None,
+                    thumbnail: None,
+                    title: None,
+                    url: None,
+                    video: None,
+                }])
+                .into_report()
+                .change_context(EventError::ReactionError(ReactionError::StarboardMessage))?
                 .await
                 .into_report()
-                .change_context(EventError::ReactionError(ReactionError::ReplyMessage))?;
+                .change_context(EventError::ReactionError(ReactionError::StarboardMessage))?;
         }
         Event::ShardConnected(e) => {
             println!("Connected on shard {}", e.shard_id);

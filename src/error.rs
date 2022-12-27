@@ -43,8 +43,8 @@ pub enum ReactionError {
     RetrieveMessage,
     /// The response message was too long.
     ContentResponseTooLong,
-    /// Failed to reply to the user.
-    ReplyMessage,
+    /// Failed to generate starboard message
+    StarboardMessage,
 }
 
 /// Errors associated when handling a Discord event
@@ -72,7 +72,7 @@ impl fmt::Display for EventError {
                 }
                 ReactionError::RetrieveMessage => "Failed to retrieve the message reacted to",
                 ReactionError::ContentResponseTooLong => "Response message exceeded maximum length",
-                ReactionError::ReplyMessage => "Failed to respond to channel",
+                ReactionError::StarboardMessage => "Failed to create starboard message",
             },
         };
 
