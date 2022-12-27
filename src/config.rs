@@ -1,6 +1,7 @@
 use std::env;
 
 use error_stack::{IntoReport, Result, ResultExt};
+use twilight_model::id::{marker::ChannelMarker, Id};
 
 use crate::error::ConfigError;
 
@@ -11,6 +12,8 @@ pub struct ApplicationConfig {
     pub database_url: String,
     /// The amount of unique reactions (not including message author) to a message to make it starboard material.
     pub reaction_requirement: u32,
+    /// The channel to post starboard messages into
+    pub starboard_channel_id: Id<ChannelMarker>,
 }
 
 /// Loads the specified environment variable, returning `Ok` with the env variable if found, or `Err` if it was not found.
@@ -39,11 +42,20 @@ impl ApplicationConfig {
             .change_context(ConfigError::ParseError {
                 config_option: "REACTION_REQUIREMENT".to_string(),
             })?;
+        let starboard_channel_id = Id::new(
+            load_env("STARBOARD_CHANNEL_ID")?
+                .parse()
+                .into_report()
+                .change_context(ConfigError::ParseError {
+                    config_option: "STARBOARD_CHANNEL_ID".to_string(),
+                })?,
+        );
 
         Ok(Self {
             database_url,
             discord_token,
             reaction_requirement,
+            starboard_channel_id,
         })
     }
 }
