@@ -8,21 +8,18 @@ use std::{str::FromStr, sync::Arc};
 use twilight_cache_inmemory::{InMemoryCache, ResourceType};
 use twilight_gateway::{Event, Intents, Shard};
 use twilight_http::{request::channel::reaction::RequestReactionType, Client};
-use twilight_model::{
-    channel::message::{
-        embed::{EmbedAuthor, EmbedField, EmbedImage},
-        Embed, ReactionType,
-    },
-    id::{marker::MessageMarker, Id},
-};
+use twilight_model::id::{marker::MessageMarker, Id};
 
 mod config;
+mod create_starboard_message;
 mod error;
 
 use config::ApplicationConfig;
 use error::{
     ApplicationError, ConfigError, DatabaseError, DiscordError, EventError, ReactionError,
 };
+
+use crate::create_starboard_message::create_starboard_message;
 
 #[tokio::main]
 async fn main() -> Result<(), ApplicationError> {
@@ -133,12 +130,6 @@ WHERE message_id = ?
             ))?
             .map(Id::new);
 
-            // if the starboard message was already created
-            // we do not need to do any more work
-            if starboard_id.is_some() {
-                return Ok(());
-            }
-
             // retrieve the amount of reactions the message has now
             let message = http
                 .message(added.channel_id, added.message_id)
@@ -162,85 +153,42 @@ WHERE message_id = ?
                 "message {message_id} has {max_reactions} max reactions for a single emoji now"
             );
 
-            if max_reactions < config.reaction_requirement.into() {
-                http.create_reaction(
-                    added.channel_id,
-                    added.message_id,
-                    &RequestReactionType::Unicode { name: "💀" },
-                )
-                .await
-                .expect("Failed to react");
+            // update the starboard message if we already made one
+            // to display the new amount of reactions
+            if let Some(starboard_message_id) = starboard_id {
+                let new_message = create_starboard_message(message);
 
-                // update the starboard message
-                // todo
+                http.update_message(config.starboard_channel_id, starboard_message_id)
+                    .content(Some(&new_message.content))
+                    .into_report()
+                    .change_context(EventError::ReactionError(
+                        ReactionError::ContentResponseTooLong,
+                    ))?
+                    .embeds(Some(&new_message.embeds))
+                    .into_report()
+                    .change_context(EventError::ReactionError(ReactionError::StarboardMessage))?
+                    .await
+                    .into_report()
+                    .change_context(EventError::ReactionError(ReactionError::StarboardMessage))?;
 
                 return Ok(());
             }
 
+            // check if not enough reactions were done to make a starboard post
+            if max_reactions < config.reaction_requirement.into() {
+                return Ok(());
+            }
+
             // add to starboard!
+            let starboard_message = create_starboard_message(message);
             let starboard_message = http
                 .create_message(config.starboard_channel_id)
-                .content(&format!(
-                    "{max_reactions} {} in <#{}>",
-                    match &added.emoji {
-                        ReactionType::Unicode { name } => name.to_owned(),
-                        ReactionType::Custom { id, name, .. } =>
-                            format!("<:{}:{id}>", name.as_deref().unwrap_or_default()),
-                    },
-                    added.channel_id
-                ))
+                .content(&starboard_message.content)
                 .into_report()
                 .change_context(EventError::ReactionError(
                     ReactionError::ContentResponseTooLong,
                 ))?
-                .embeds(&[Embed {
-                    author: Some(EmbedAuthor {
-                        icon_url: Some(match message.author.avatar {
-                            Some(hash) => format!(
-                                "https://cdn.discordapp.com/avatars/{}/{}.{}",
-                                message.author.id,
-                                hash,
-                                if hash.is_animated() { "gif" } else { "webp" }
-                            ),
-                            None => format!(
-                                "https://cdn.discordapp.com/embed/avatars/{}.png",
-                                message.author.discriminator % 5
-                            ),
-                        }),
-                        name: message.author.name,
-                        proxy_icon_url: None,
-                        url: None,
-                    }),
-                    color: Some(15844367),
-                    description: Some(message.content),
-                    fields: vec![EmbedField {
-                        inline: false,
-                        name: "Message Link".to_string(),
-                        value: format!(
-                            "[Click to jump to message](https://discord.com/channels/{}/{}/{})",
-                            match message.guild_id {
-                                Some(guild_id) => guild_id.to_string(),
-                                None => "@me".to_string(),
-                            },
-                            message.channel_id,
-                            message.id
-                        ),
-                    }],
-                    footer: None,
-                    timestamp: Some(message.timestamp),
-                    kind: "rich".to_string(),
-                    image: message.attachments.into_iter().next().map(|i| EmbedImage {
-                        url: i.url,
-                        proxy_url: Some(i.proxy_url),
-                        height: None,
-                        width: None,
-                    }),
-                    provider: None,
-                    thumbnail: None,
-                    title: None,
-                    url: None,
-                    video: None,
-                }])
+                .embeds(&starboard_message.embeds)
                 .into_report()
                 .change_context(EventError::ReactionError(ReactionError::StarboardMessage))?
                 .await
