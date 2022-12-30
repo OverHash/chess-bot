@@ -46,7 +46,7 @@ async fn main() -> Result<(), ApplicationError> {
         pool.num_idle()
     );
 
-    // let Discord know the intentions we need to run the bot with the correct intentions
+    // let Discord know the intentions we need to run the bot with
     let intents = Intents::GUILDS
         | Intents::GUILD_MESSAGES
         | Intents::MESSAGE_CONTENT
