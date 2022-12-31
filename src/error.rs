@@ -47,40 +47,42 @@ pub enum ReactionError {
     StarboardMessage,
 }
 
+impl fmt::Display for ReactionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let event_error = match self {
+            ReactionError::DatabaseConnect => "Failed to acquire database pool connection",
+            ReactionError::PreviousReactionCount => {
+                "Failed to retrieve the previous reaction count"
+            }
+            ReactionError::RetrieveMessage => "Failed to retrieve the message reacted to",
+            ReactionError::ContentResponseTooLong => "Response message exceeded maximum length",
+            ReactionError::StarboardMessage => "Failed to create starboard message",
+        };
+
+        write!(f, "{event_error}")
+    }
+}
+
+impl Context for ReactionError {}
+
 /// Errors associated when handling a Discord event
 #[derive(Debug)]
 pub enum EventError {
     /// Failed to handle a message having a reaction event (added / removed).
-    ReactionError(ReactionError),
+    ReactionError,
 }
 
 impl EventError {
     fn get_event_name(&self) -> &'static str {
         match self {
-            EventError::ReactionError(_) => "Reaction",
+            EventError::ReactionError => "Reaction",
         }
     }
 }
 
 impl fmt::Display for EventError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let event_error = match self {
-            EventError::ReactionError(reaction_error) => match reaction_error {
-                ReactionError::DatabaseConnect => "Failed to acquire database pool connection",
-                ReactionError::PreviousReactionCount => {
-                    "Failed to retrieve the previous reaction count"
-                }
-                ReactionError::RetrieveMessage => "Failed to retrieve the message reacted to",
-                ReactionError::ContentResponseTooLong => "Response message exceeded maximum length",
-                ReactionError::StarboardMessage => "Failed to create starboard message",
-            },
-        };
-
-        write!(
-            f,
-            "Failed to process event '{}': {event_error}",
-            self.get_event_name()
-        )
+        write!(f, "Failed to process event '{}'", self.get_event_name())
     }
 }
 
