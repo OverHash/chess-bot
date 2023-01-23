@@ -1,0 +1,31 @@
+{
+  "db": "SQLite",
+  "23d4c50e8ab680cfae4e58339f560e9e24f08f4a53fbbe9cd2945d43fa7c235c": {
+    "describe": {
+      "columns": [
+        {
+          "name": "starboard_id",
+          "ordinal": 0,
+          "type_info": "Int64"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "\nSELECT starboard_id\nFROM starboard\nWHERE message_id = ?\n\t"
+  },
+  "956dc3a49df4925b9597b47ad3fb52fba0a2d8ba0b9dcb277205185886ad983d": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 2
+      }
+    },
+    "query": "\nINSERT INTO starboard (starboard_id, message_id)\nVALUES (?, ?)\n\t\t"
+  }
+}
