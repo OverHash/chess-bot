@@ -87,7 +87,15 @@ jobs:
           echo -e "[target.arm-unknown-linux-gnueabihf]\nlinker=\"arm-linux-gnueabihf-gcc\"" > .cargo/config
 
       - name: Build Release
-        run: cargo build --release --locked --verbose --target=${{ matrix.target }}
+        shell: bash
+        run: |
+          if [ "${{ matrix.target }}" = "arm-unknown-linux-gnueabihf"]; then
+              # use cross compilation
+              cargo install cross
+              cross build --release --locked --verbose --target=${{ matrix.target }}
+          else
+              cargo build --release --locked --verbose --target=${{ matrix.target }}
+          fi
         env:
           # Build into a known directory so we can find our build artifact more
           # easily.
