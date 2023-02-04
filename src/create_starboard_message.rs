@@ -15,6 +15,8 @@ pub struct StarboardMessage {
     pub embeds: Vec<Embed>,
 }
 
+/// Generates the relevant fields to set in a [`twilight_http::request::channel::message::UpdateMessage`]
+/// or [`twilight_http::request::channel::message::CreateMessage`] struct to represent a starboard message.
 pub fn create_starboard_message(message: Message) -> StarboardMessage {
     let max_reactions = message
         .reactions

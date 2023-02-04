@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use error_stack::{IntoReport, Report, ResultExt};
 use sqlx::SqlitePool;
-use twilight_http::{request::channel::reaction::RequestReactionType, Client};
+use twilight_http::Client;
 use twilight_model::{
     gateway::payload::incoming::ReactionAdd,
     id::{marker::MessageMarker, Id},
@@ -13,6 +13,9 @@ use crate::{
     error::ReactionError,
 };
 
+/// Fired when a reaction is added to a message.
+///
+/// Handles updating the starboard channel.
 pub async fn reaction_add(
     added: Box<ReactionAdd>,
     http: Arc<Client>,
