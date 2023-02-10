@@ -4,7 +4,9 @@ mod database;
 mod discord;
 mod event;
 mod reaction;
+mod rss;
 
+pub use self::rss::RssError;
 pub use application::ApplicationError;
 pub use config::ConfigError;
 pub use database::DatabaseError;
