@@ -77,6 +77,11 @@ jobs:
           override: true
           profile: minimal
 
+      - name: Install libssl-dev
+        if: ${{ matrix.target == 'arm-unknown-linux-gnueabihf' }}
+        run: |
+          sudo apt install libssl-dev -y
+
       - name: Build Release
         shell: bash
         run: |
