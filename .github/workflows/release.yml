@@ -82,7 +82,7 @@ jobs:
         run: |
           if [ "${{ matrix.target }}" = "arm-unknown-linux-gnueabihf" ]; then
               # use cross compilation
-              cargo install cross
+              cargo install cross --git https://github.com/cross-rs/cross
               cross build --release --locked --verbose --target=${{ matrix.target }}
           else
               cargo build --release --locked --verbose --target=${{ matrix.target }}
