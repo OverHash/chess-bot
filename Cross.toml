@@ -1,5 +1,0 @@
-[build]
-pre-build = [
-	"dpkg --add-architecture arm64",
-	"apt-get update && apt-get install --assume-yes libssl-dev openssl:arm64 libssl-dev:arm64",
-]
