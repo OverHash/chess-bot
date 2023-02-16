@@ -4,4 +4,4 @@ CREATE TABLE IF NOT EXISTS announcement_feed
 (
 	id					TEXT		PRIMARY KEY NOT NULL,
 	last_updated_time	INTEGER		NOT NULL
-)
+);
