@@ -1,7 +1,10 @@
 use std::{env, time::Duration};
 
 use error_stack::{IntoReport, Result, ResultExt};
-use twilight_model::id::{marker::ChannelMarker, Id};
+use twilight_model::id::{
+    marker::{ChannelMarker, RoleMarker},
+    Id,
+};
 
 use crate::error::ConfigError;
 
@@ -14,10 +17,11 @@ pub struct ApplicationConfig {
     pub reaction_requirement: u32,
     /// The channel to post starboard messages into
     pub starboard_channel_id: Id<ChannelMarker>,
-    /// The announcement RSS URLs to read from, paired with the channel ID to post to.
+    /// The announcement RSS URLs to read from, paired with the channel ID to post to. Also includes an optional
+    /// role that can be pinged when announcements are made.
     ///
     /// This is an optional feature, and the user may not specify it.
-    pub announcement_rss_urls: Option<Vec<(String, Id<ChannelMarker>)>>,
+    pub announcement_rss_urls: Option<Vec<(String, Id<ChannelMarker>, Option<Id<RoleMarker>>)>>,
     /// The amount of time (in seconds) to wait before performing checking operations for new announcements.
     pub announcement_check_interval: Duration,
 }
@@ -71,19 +75,38 @@ impl ApplicationConfig {
                 // each new line denotes a new URL and channel pair
                 val.split('\n')
                     .map(|line| {
-                        let Some((rss, channel_id)) = line.split_once(',') else {
-					return Ok(None);
-				};
+                        let mut parts = line.split(',');
+                        let rss_url = parts.next();
+                        let channel_id = parts.next();
+                        let role_id = parts.next();
+
+                        rss_url
+                            .zip(channel_id)
+                            .and_then(|(url, channel_id)| Some((url, channel_id, role_id)))
+                    })
+                    .flatten() // remove invalid lines
+                    .map(|(rss, channel_id, role_id)| {
                         // attempt to parse the channel id and create channel marker
                         let channel_id = channel_id.parse::<u64>().into_report().change_context(
                             ConfigError::ParseError {
-                                config_option: "STARBOARD_CHANNEL_ID".to_string(),
+                                config_option: "ANNOUNCEMENT_CHANNEL_ID".to_string(),
                             },
                         )?;
 
                         let channel_marker = Id::new(channel_id);
 
-                        Ok(Some((rss.to_string(), channel_marker)))
+                        let role_id = role_id
+                            .map(|role_id| {
+                                role_id.parse::<u64>().into_report().change_context(
+                                    ConfigError::ParseError {
+                                        config_option: "ANNOUNCEMENT_ROLE_ID".to_string(),
+                                    },
+                                )
+                            })
+                            .transpose()?;
+                        let role_marker = role_id.map(|role_id| Id::new(role_id));
+
+                        Ok(Some((rss.to_string(), channel_marker, role_marker)))
                     })
                     .collect::<Result<Vec<_>, _>>()
             })

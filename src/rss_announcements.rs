@@ -6,7 +6,10 @@ use sqlx::SqlitePool;
 use twilight_http::Client;
 use twilight_model::{
     channel::message::{embed::EmbedAuthor, Embed},
-    id::{marker::ChannelMarker, Id},
+    id::{
+        marker::{ChannelMarker, RoleMarker},
+        Id,
+    },
     util::Timestamp,
 };
 
@@ -17,7 +20,7 @@ use crate::error::RssError;
 /// Checks for new announcements every `check_interval` and posts them to the
 /// specified channel ID.
 pub async fn handle_announcements(
-    announcement_urls: Vec<(String, Id<ChannelMarker>)>,
+    announcement_urls: Vec<(String, Id<ChannelMarker>, Option<Id<RoleMarker>>)>,
     pool: SqlitePool,
     client: Arc<Client>,
     check_interval: Duration,
@@ -26,7 +29,7 @@ pub async fn handle_announcements(
 
     loop {
         // check for new announcements
-        for (url, channel) in announcement_urls.iter() {
+        for (url, channel, role_id) in announcement_urls.iter() {
             let rss_feed = web_client
                 .get(url)
                 .send()
@@ -139,11 +142,20 @@ pub async fn handle_announcements(
                         description: entry
                             .content
                             .map(|content| {
-                                content.body.map(|body| {
-                                    body.replace("&nbsp;", "")
-                                        .replace("<p>", "")
-                                        .replace("</p>", "\n")
-                                })
+                                content
+                                    .body
+                                    .map(|body| {
+                                        body.replace("&nbsp;", "")
+                                            .replace("<p>", "")
+                                            .replace("</p>", "\n")
+                                    })
+                                    .map(|msg| {
+                                        if let Some(role_id) = role_id {
+                                            format!("<@{role_id}>\n\n{msg}")
+                                        } else {
+                                            msg
+                                        }
+                                    })
                             })
                             .flatten(),
                         title: entry.title.map(|title| title.content),
