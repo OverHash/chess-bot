@@ -126,6 +126,12 @@ pub async fn handle_announcements(
                 println!("A new post was made!");
                 client
                     .create_message(channel.to_owned())
+                    .content(&match role_id {
+                        Some(id) => format!("<@{id}>"),
+                        None => String::new(),
+                    })
+                    .into_report()
+                    .change_context(RssError::PostError)?
                     .embeds(&[Embed {
                         author: Some(EmbedAuthor {
                             name: entry
@@ -142,20 +148,16 @@ pub async fn handle_announcements(
                         description: entry
                             .content
                             .map(|content| {
-                                content
-                                    .body
-                                    .map(|body| {
-                                        body.replace("&nbsp;", "")
-                                            .replace("<p>", "")
-                                            .replace("</p>", "\n")
-                                    })
-                                    .map(|msg| {
-                                        if let Some(role_id) = role_id {
-                                            format!("<@{role_id}>\n\n{msg}")
-                                        } else {
-                                            msg
-                                        }
-                                    })
+                                content.body.map(|body| {
+                                    let mut filtered_body = body
+                                        .replace("&nbsp;", "")
+                                        .replace("<p>", "")
+                                        .replace("</p>", "\n");
+
+                                    filtered_body.truncate(4096);
+
+                                    filtered_body
+                                })
                             })
                             .flatten(),
                         title: entry.title.map(|title| title.content),

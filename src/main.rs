@@ -76,7 +76,7 @@ async fn main() -> Result<(), ApplicationError> {
             let result =
                 handle_announcements(announcement_urls, pool, client, check_interval).await;
             if let Err(report) = result {
-                println!("RSS task failed: {report}");
+                println!("RSS task failed: {report:?}");
             }
         });
     }
