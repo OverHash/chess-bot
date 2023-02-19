@@ -1,12 +1,11 @@
 use error_stack::{IntoReport, Result, ResultExt};
-use futures::stream::StreamExt;
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqlitePoolOptions},
     SqlitePool,
 };
 use std::{str::FromStr, sync::Arc};
 use twilight_cache_inmemory::{InMemoryCache, ResourceType};
-use twilight_gateway::{Event, Intents, Shard};
+use twilight_gateway::{Event, Intents, Shard, ShardId};
 use twilight_http::Client;
 
 mod config;
@@ -50,12 +49,7 @@ async fn main() -> Result<(), ApplicationError> {
         | Intents::GUILD_MESSAGES
         | Intents::MESSAGE_CONTENT
         | Intents::GUILD_MESSAGE_REACTIONS;
-    let (cluster, mut events) = Shard::new(config.discord_token.clone(), intents);
-    cluster
-        .start()
-        .await
-        .into_report()
-        .change_context(ApplicationError::Discord(DiscordError::ConnectError))?;
+    let mut cluster = Shard::new(ShardId::ONE, config.discord_token.clone(), intents);
 
     // Since we only care about message emojis, make the cache only process messages.
     let cache = Arc::new(
@@ -83,25 +77,34 @@ async fn main() -> Result<(), ApplicationError> {
 
     // Startup an event loop to process each event in the event stream as they
     // come in.
-    while let Some(event) = events.next().await {
-        let cache = cache.clone();
-        // Update the cache.
-        cache.update(&event);
+    loop {
+        match cluster.next_event().await {
+            Ok(event) => {
+                let cache = cache.clone();
+                // Update the cache.
+                cache.update(&event);
 
-        // Spawn a new task to handle the event
-        tokio::spawn(handle_event(
-            event,
-            client.clone(),
-            pool.clone(),
-            config.clone(),
-        ))
-        .await
-        .into_report()
-        .change_context(ApplicationError::Thread)?
-        .change_context(ApplicationError::Event)?;
+                // Spawn a new task to handle the event
+                tokio::spawn(handle_event(
+                    event,
+                    client.clone(),
+                    pool.clone(),
+                    config.clone(),
+                ))
+                .await
+                .into_report()
+                .change_context(ApplicationError::Thread)?
+                .change_context(ApplicationError::Event)?;
+            }
+            Err(source) => {
+                if source.is_fatal() {
+                    return Err(source)
+                        .into_report()
+                        .change_context(ApplicationError::Discord(DiscordError::ConnectError))?;
+                }
+            }
+        };
     }
-
-    Ok(())
 }
 
 async fn handle_event(
@@ -116,8 +119,8 @@ async fn handle_event(
                 .await
                 .change_context(EventError::ReactionError)?;
         }
-        Event::ShardConnected(e) => {
-            println!("Connected on shard {}", e.shard_id);
+        Event::GatewayHello(_) => {
+            println!("Connected to Discord gateway");
         }
         _ => {}
     }
