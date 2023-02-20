@@ -127,7 +127,7 @@ pub async fn handle_announcements(
                 client
                     .create_message(channel.to_owned())
                     .content(&match role_id {
-                        Some(id) => format!("<@{id}>"),
+                        Some(id) => format!("<@&{id}>"),
                         None => String::new(),
                     })
                     .into_report()
