@@ -46,16 +46,6 @@
     },
     "query": "\n\t\t\t\t\t\tSELECT last_updated_time FROM announcement_feed WHERE id = ?\n\t\t\t\t\t\t"
   },
-  "cea5cf9bb142c299fa52d982c2e5eb51341426db2d86bb7975b6e109e8001dae": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 2
-      }
-    },
-    "query": "\n\t\t\t\t\t\tINSERT INTO announcement_feed (id, last_updated_time)\n\t\t\t\t\t\tVALUES (?, ?)\n\t\t\t\t\t\t"
-  },
   "d59285a0cb11d71e182fdc72a33bf662e81a918f5ebacec48b68022c3f370c7f": {
     "describe": {
       "columns": [],
@@ -65,5 +55,15 @@
       }
     },
     "query": "\n\t\t\t\t\tUPDATE announcement_feed\n\t\t\t\t\tSET last_updated_time = ?\n\t\t\t\t\tWHERE id = ?\n\t\t\t\t\t"
+  },
+  "df7793e70f0a887b3fc26e223bbca47d9fbffab019bb524ab7f09d490f623b1a": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 2
+      }
+    },
+    "query": "\n\t\t\t\tINSERT INTO announcement_feed (id, last_updated_time)\n\t\t\t\tVALUES (?, ?)\n\t\t\t\t"
   }
 }
