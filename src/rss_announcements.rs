@@ -2,6 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use chrono::{TimeZone, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
+use feed_rs::model::Feed;
 use sqlx::SqlitePool;
 use twilight_http::Client;
 use twilight_model::{
@@ -14,6 +15,29 @@ use twilight_model::{
 };
 
 use crate::error::RssError;
+
+/// Retrieves the announcements for a specific channel at a `url` specified.
+pub async fn get_channel_announcements(
+    web_client: &reqwest::Client,
+    url: &String,
+) -> Result<Feed, Report<RssError>> {
+    let rss_feed = web_client
+        .get(url)
+        .send()
+        .await
+        .into_report()
+        .change_context(RssError::FetchError)?
+        .bytes()
+        .await
+        .into_report()
+        .change_context(RssError::FetchError)?;
+
+    let rss_feed = feed_rs::parser::parse_with_uri(&rss_feed[..], Some(url))
+        .into_report()
+        .change_context(RssError::ReadError)?;
+
+    Ok(rss_feed)
+}
 
 /// Handles the announcement feed given a list of announcement URLs.
 ///
@@ -30,26 +54,27 @@ pub async fn handle_announcements(
     loop {
         // check for new announcements
         for (url, channel, role_id) in announcement_urls.iter() {
-            let rss_feed = web_client
-                .get(url)
-                .send()
-                .await
-                .into_report()
-                .change_context(RssError::FetchError)?
-                .bytes()
-                .await
-                .into_report()
-                .change_context(RssError::FetchError)?;
+            let feed = get_channel_announcements(&web_client, url).await;
 
-            let rss_feed = feed_rs::parser::parse_with_uri(&rss_feed[..], Some(url))
-                .into_report()
-                .change_context(RssError::ReadError)?;
+            // if it was an fetch/read error, output error and move to the next feed
+            if let Err(report) = &feed {
+                if matches!(report.current_context(), RssError::FetchError)
+                    || matches!(report.current_context(), RssError::ReadError)
+                {
+                    println!("Failed to fetch feed at {url}: {report:?}");
+                    println!("Ignoring fetch error, and continuing to next announcement stream");
+                    continue;
+                }
+            }
+
+            // otherwise, try decode the value and handle logic
+            let feed = feed?;
 
             // check updated time against database
-            let Some(updated_time) = rss_feed.updated else {
-						// go to the next stream
-						continue;
-					};
+            let Some(updated_time) = feed.updated else {
+				// go to the next stream
+				continue;
+			};
 
             let mut pool = pool
                 .acquire()
@@ -61,7 +86,7 @@ pub async fn handle_announcements(
                 r#"
 						SELECT last_updated_time FROM announcement_feed WHERE id = ?
 						"#,
-                rss_feed.id
+                feed.id
             )
             .fetch_optional(&mut pool)
             .await
@@ -76,17 +101,17 @@ pub async fn handle_announcements(
 
             let current_time = Utc::now().timestamp_millis();
             let Some(database_updated_time) = database_updated_time else {
-						// this is our first time running this announcement stream
-						// mark the current time and go to the next announcement stream
-						// otherwise we will flood the output with announcements
+				// this is our first time running this announcement stream
+				// mark the current time and go to the next announcement stream
+				// otherwise we will flood the output with announcements
 
-						sqlx::query!(r#"
-						INSERT INTO announcement_feed (id, last_updated_time)
-						VALUES (?, ?)
-						"#, rss_feed.id, current_time).execute(&mut pool).await.into_report().change_context(RssError::DatabaseError)?;
+				sqlx::query!(r#"
+				INSERT INTO announcement_feed (id, last_updated_time)
+				VALUES (?, ?)
+				"#, feed.id, current_time).execute(&mut pool).await.into_report().change_context(RssError::DatabaseError)?;
 
-						continue;
-					};
+				continue;
+			};
 
             // update last update time in database
             sqlx::query!(
@@ -96,7 +121,7 @@ pub async fn handle_announcements(
 					WHERE id = ?
 					"#,
                 current_time,
-                rss_feed.id
+                feed.id
             )
             .execute(&mut pool)
             .await
@@ -109,7 +134,7 @@ pub async fn handle_announcements(
             }
 
             // there are new events, get them all!
-            let new_entries = rss_feed.entries.into_iter().filter_map(|entry| {
+            let new_entries = feed.entries.into_iter().filter_map(|entry| {
                 entry
                     .updated
                     .map(|date| {
