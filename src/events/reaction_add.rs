@@ -68,7 +68,7 @@ WHERE message_id = ?
         .map(|r| r.count)
         .max()
         .unwrap_or_default();
-    println!("message {message_id} has {max_reactions} max reactions for a single emoji now");
+    log::info!("message {message_id} has {max_reactions} max reactions for a single emoji now");
 
     // update the starboard message if we already made one
     // to display the new amount of reactions

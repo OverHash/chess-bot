@@ -61,8 +61,8 @@ pub async fn handle_announcements(
                 if matches!(report.current_context(), RssError::FetchError)
                     || matches!(report.current_context(), RssError::ReadError)
                 {
-                    println!("Failed to fetch feed at {url}: {report:?}");
-                    println!("Ignoring fetch error, and continuing to next announcement stream");
+                    log::error!("Failed to fetch feed at {url}: {report:?}");
+                    log::info!("Ignoring fetch error, and continuing to next announcement stream");
                     continue;
                 }
             }
@@ -148,7 +148,7 @@ pub async fn handle_announcements(
             });
 
             for (entry, post_date) in new_entries {
-                println!("A new post was made!");
+                log::info!("A new post was made!");
                 client
                     .create_message(channel.to_owned())
                     .content(&match role_id {

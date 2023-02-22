@@ -24,6 +24,8 @@ async fn main() -> Result<(), ApplicationError> {
     // load `.env` file (if it exists) and subsequent config file into memory
     dotenvy::dotenv().ok();
 
+    env_logger::init();
+
     let config = Arc::new(ApplicationConfig::load().change_context(ApplicationError::LoadConfig)?);
 
     // connect to sqlite database
@@ -39,7 +41,7 @@ async fn main() -> Result<(), ApplicationError> {
         .await
         .into_report()
         .change_context(ApplicationError::Database(DatabaseError::ConnectError))?;
-    println!(
+    log::info!(
         "Connected to sqlite database with {} connections",
         pool.num_idle()
     );
@@ -70,7 +72,7 @@ async fn main() -> Result<(), ApplicationError> {
             let result =
                 handle_announcements(announcement_urls, pool, client, check_interval).await;
             if let Err(report) = result {
-                println!("RSS task failed: {report:?}");
+                log::error!("RSS task failed: {report:?}");
             }
         });
     }
@@ -120,7 +122,7 @@ async fn handle_event(
                 .change_context(EventError::ReactionError)?;
         }
         Event::GatewayHello(_) => {
-            println!("Connected to Discord gateway");
+            log::info!("Connected to Discord gateway");
         }
         _ => {}
     }
