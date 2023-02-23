@@ -22,6 +22,11 @@ pub async fn reaction_add(
     pool: SqlitePool,
     config: Arc<ApplicationConfig>,
 ) -> Result<(), Report<ReactionError>> {
+    // ensure that message was in a server we are tracking
+    if config.server_id == added.guild_id {
+        return Ok(());
+    }
+
     // first check if message has already been starboard'd
     let mut pool = pool
         .acquire()

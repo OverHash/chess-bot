@@ -2,7 +2,7 @@ use std::{env, time::Duration};
 
 use error_stack::{IntoReport, Result, ResultExt};
 use twilight_model::id::{
-    marker::{ChannelMarker, RoleMarker},
+    marker::{ChannelMarker, GuildMarker, RoleMarker},
     Id,
 };
 
@@ -24,6 +24,8 @@ pub struct ApplicationConfig {
     pub announcement_rss_urls: Option<Vec<(String, Id<ChannelMarker>, Option<Id<RoleMarker>>)>>,
     /// The amount of time (in seconds) to wait before performing checking operations for new announcements.
     pub announcement_check_interval: Duration,
+    /// The server to only track messages in, if specified.
+    pub server_id: Option<Id<GuildMarker>>,
 }
 
 /// Loads the specified environment variable, returning `Ok` with the env variable if found, or `Err` if it was not found.
@@ -115,6 +117,16 @@ impl ApplicationConfig {
             // turn our Option<Vec<Option<...>>> into a Option<Vec<...>>
             .map(|urls| urls.into_iter().flatten().collect());
 
+        let server_id = load_env("SERVER_ID")
+            .ok()
+            .map(|server_id| server_id.parse())
+            .transpose()
+            .into_report()
+            .change_context(ConfigError::ParseError {
+                config_option: "SERVER_ID".to_string(),
+            })?
+            .map(|server_id| Id::new(server_id));
+
         Ok(Self {
             database_url,
             discord_token,
@@ -122,6 +134,7 @@ impl ApplicationConfig {
             starboard_channel_id,
             announcement_rss_urls,
             announcement_check_interval,
+            server_id,
         })
     }
 }
