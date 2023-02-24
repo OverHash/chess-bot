@@ -1,7 +1,7 @@
 [package]
 name = "chess-bot"
 description = "A bot to manage the <Chess /> Discord server"
-version = "1.1.4"
+version = "1.1.5"
 edition = "2021"
 
 [dependencies]
