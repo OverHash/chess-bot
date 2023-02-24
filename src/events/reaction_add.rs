@@ -23,7 +23,7 @@ pub async fn reaction_add(
     config: Arc<ApplicationConfig>,
 ) -> Result<(), Report<ReactionError>> {
     // ensure that message was in a server we are tracking
-    if config.server_id == added.guild_id {
+    if config.server_id != added.guild_id {
         return Ok(());
     }
 
