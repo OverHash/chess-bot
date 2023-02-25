@@ -23,7 +23,13 @@ pub async fn reaction_add(
     config: Arc<ApplicationConfig>,
 ) -> Result<(), Report<ReactionError>> {
     // ensure that message was in a server we are tracking
-    if config.server_id != added.guild_id {
+    // if we are not tracking a server id, then we default to
+    // accepting this incoming event
+    if !config
+        .server_id
+        .map(|id| Some(id) == added.guild_id)
+        .unwrap_or(true)
+    {
         return Ok(());
     }
 
@@ -44,7 +50,7 @@ WHERE message_id = ?
 	"#,
         message_id
     )
-    .fetch_optional(&mut pool)
+    .fetch_optional(&mut *pool)
     .await
     .into_report()
     .change_context(ReactionError::PreviousReactionCount)?
@@ -127,7 +133,7 @@ VALUES (?, ?)
         starboard_message_id,
         message_id
     )
-    .execute(&mut pool)
+    .execute(&mut *pool)
     .await
     .into_report()
     .change_context(ReactionError::PreviousReactionCount)?;

@@ -115,6 +115,7 @@ async fn handle_event(
     pool: SqlitePool,
     config: Arc<ApplicationConfig>,
 ) -> Result<(), EventError> {
+    log::trace!("Received event {event:?}");
     match event {
         Event::ReactionAdd(added) => {
             events::reaction_add(added, http, pool, config)

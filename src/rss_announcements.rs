@@ -88,7 +88,7 @@ pub async fn handle_announcements(
 						"#,
                 feed.id
             )
-            .fetch_optional(&mut pool)
+            .fetch_optional(&mut *pool)
             .await
             .into_report()
             .change_context(RssError::DatabaseError)?
@@ -108,7 +108,7 @@ pub async fn handle_announcements(
 				sqlx::query!(r#"
 				INSERT INTO announcement_feed (id, last_updated_time)
 				VALUES (?, ?)
-				"#, feed.id, current_time).execute(&mut pool).await.into_report().change_context(RssError::DatabaseError)?;
+				"#, feed.id, current_time).execute(&mut *pool).await.into_report().change_context(RssError::DatabaseError)?;
 
 				continue;
 			};
@@ -123,7 +123,7 @@ pub async fn handle_announcements(
                 current_time,
                 feed.id
             )
-            .execute(&mut pool)
+            .execute(&mut *pool)
             .await
             .into_report()
             .change_context(RssError::DatabaseError)?;
