@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n\t\t\t\t\t\tSELECT last_updated_time FROM announcement_feed WHERE id = ?\n\t\t\t\t\t\t",
+  "describe": {
+    "columns": [
+      {
+        "name": "last_updated_time",
+        "ordinal": 0,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "aabf41d5ee333c6f04adc2074626f6a1ebe137b63404d460ef234d753541dd7a"
+}

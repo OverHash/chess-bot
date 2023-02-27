@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\nSELECT starboard_id\nFROM starboard\nWHERE message_id = ?\n\t",
+  "describe": {
+    "columns": [
+      {
+        "name": "starboard_id",
+        "ordinal": 0,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "23d4c50e8ab680cfae4e58339f560e9e24f08f4a53fbbe9cd2945d43fa7c235c"
+}

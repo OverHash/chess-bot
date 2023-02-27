@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n\t\t\t\tINSERT INTO announcement_feed (id, last_updated_time)\n\t\t\t\tVALUES (?, ?)\n\t\t\t\t",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "df7793e70f0a887b3fc26e223bbca47d9fbffab019bb524ab7f09d490f623b1a"
+}

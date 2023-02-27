@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\nINSERT INTO starboard (starboard_id, message_id)\nVALUES (?, ?)\n\t\t",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "956dc3a49df4925b9597b47ad3fb52fba0a2d8ba0b9dcb277205185886ad983d"
+}
