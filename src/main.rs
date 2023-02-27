@@ -27,6 +27,7 @@ async fn main() -> Result<(), ApplicationError> {
     env_logger::init();
 
     let config = Arc::new(ApplicationConfig::load().change_context(ApplicationError::LoadConfig)?);
+    log::debug!("Loaded config: {config:?}");
 
     // connect to sqlite database
     let connection_options = SqliteConnectOptions::from_str(&config.database_url)
@@ -115,7 +116,7 @@ async fn handle_event(
     pool: SqlitePool,
     config: Arc<ApplicationConfig>,
 ) -> Result<(), EventError> {
-    log::trace!("Received event {event:?}");
+    log::debug!("Received event {event:?}");
     match event {
         Event::ReactionAdd(added) => {
             events::reaction_add(added, http, pool, config)

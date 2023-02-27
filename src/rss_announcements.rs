@@ -52,6 +52,8 @@ pub async fn handle_announcements(
     let web_client = reqwest::Client::new();
 
     loop {
+        log::debug!("Checking for new announcement");
+
         // check for new announcements
         for (url, channel, role_id) in announcement_urls.iter() {
             let feed = get_channel_announcements(&web_client, url).await;
@@ -148,7 +150,14 @@ pub async fn handle_announcements(
             });
 
             for (entry, post_date) in new_entries {
-                log::info!("A new post was made!");
+                log::info!(
+                    "A new post in {} was made at {post_date}",
+                    entry
+                        .title
+                        .clone()
+                        .map(|title| title.content)
+                        .unwrap_or(entry.id)
+                );
                 client
                     .create_message(channel.to_owned())
                     .content(&match role_id {

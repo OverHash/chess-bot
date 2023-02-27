@@ -8,6 +8,7 @@ use twilight_model::id::{
 
 use crate::error::ConfigError;
 
+#[derive(Debug)]
 pub struct ApplicationConfig {
     /// The token to be used to login to the Discord bot.
     pub discord_token: String,
