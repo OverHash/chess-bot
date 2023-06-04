@@ -80,7 +80,7 @@ jobs:
       - name: Setup cross config
         if: ${{ matrix.target == 'arm-unknown-linux-gnueabihf' }}
         run: |
-          echo -e "[target.${{ matrix.target }}]\npre-build = [\"dpkg --add-architecture $CROSS_DEB_ARCH\", \"apt-get update && apt-get install --assume-yes libssl-dev:$CROSS_DEB_ARCH\"]\nzig = 1.31" > Cross.toml
+          echo -e "[target.${{ matrix.target }}]\npre-build = [\"dpkg --add-architecture \$CROSS_DEB_ARCH\", \"apt-get update && apt-get install --assume-yes libssl-dev:\$CROSS_DEB_ARCH\"]\nzig = 1.31" > Cross.toml
 
       - name: Build Release
         shell: bash
