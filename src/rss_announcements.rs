@@ -21,6 +21,7 @@ pub async fn get_channel_announcements(
     web_client: &reqwest::Client,
     url: &String,
 ) -> Result<Feed, Report<RssError>> {
+    log::debug!("Fetching announcements at {url}");
     let rss_feed = web_client
         .get(url)
         .send()
@@ -31,10 +32,12 @@ pub async fn get_channel_announcements(
         .await
         .into_report()
         .change_context(RssError::FetchError)?;
+    log::debug!("Received RSS feed response, attempting to parse...");
 
     let rss_feed = feed_rs::parser::parse_with_uri(&rss_feed[..], Some(url))
         .into_report()
         .change_context(RssError::ReadError)?;
+    log::debug!("Parsed RSS response to Feed");
 
     Ok(rss_feed)
 }
@@ -52,7 +55,7 @@ pub async fn handle_announcements(
     let web_client = reqwest::Client::new();
 
     loop {
-        log::debug!("Checking for new announcement");
+        log::debug!("Checking for new announcements");
 
         // check for new announcements
         for (url, channel, role_id) in announcement_urls.iter() {
@@ -63,8 +66,7 @@ pub async fn handle_announcements(
                 if matches!(report.current_context(), RssError::FetchError)
                     || matches!(report.current_context(), RssError::ReadError)
                 {
-                    log::error!("Failed to fetch feed at {url}: {report:?}");
-                    log::info!("Ignoring fetch error, and continuing to next announcement stream");
+                    log::error!("Failed to fetch feed at {url}: {report:?}, ignoring error and continuing to next announcement stream");
                     continue;
                 }
             }
@@ -73,10 +75,11 @@ pub async fn handle_announcements(
             let feed = feed?;
 
             // check updated time against database
-            let Some(updated_time) = feed.updated else {
-				// go to the next stream
-				continue;
-			};
+            let updated_time = feed
+                .updated
+                .ok_or(RssError::ReadError)
+                .into_report()
+                .attach_printable("Failed to read `updated` field of returned RSS stream")?;
 
             let mut pool = pool
                 .acquire()
@@ -103,17 +106,32 @@ pub async fn handle_announcements(
 
             let current_time = Utc::now().timestamp_millis();
             let Some(database_updated_time) = database_updated_time else {
-				// this is our first time running this announcement stream
-				// mark the current time and go to the next announcement stream
-				// otherwise we will flood the output with announcements
+                // this is our first time running this announcement stream
+                // mark the current time and go to the next announcement stream
+                // otherwise we will flood the output with announcements
 
-				sqlx::query!(r#"
+                sqlx::query!(
+                    r#"
 				INSERT INTO announcement_feed (id, last_updated_time)
 				VALUES (?, ?)
-				"#, feed.id, current_time).execute(&mut *pool).await.into_report().change_context(RssError::DatabaseError)?;
+				"#,
+                    feed.id,
+                    current_time
+                )
+                .execute(&mut *pool)
+                .await
+                .into_report()
+                .change_context(RssError::DatabaseError)?;
 
-				continue;
-			};
+                log::info!(
+                    "First time reading {} stream, not posting it's contents to avoid spam. New posts will be recorded.",
+                    feed.title
+                        .map(|title| title.content)
+                        .unwrap_or_else(|| url.to_owned())
+                );
+
+                continue;
+            };
 
             // update last update time in database
             sqlx::query!(
@@ -132,6 +150,12 @@ pub async fn handle_announcements(
 
             // if we have already processed the last event
             if database_updated_time == updated_time {
+                log::debug!(
+                    "Database updated time was the same as RSS feed updated time for {}, moving to next RSS feed",
+                    feed.title
+                        .map(|title| title.content)
+                        .unwrap_or_else(|| url.to_owned())
+                );
                 continue;
             }
 
@@ -218,6 +242,10 @@ pub async fn handle_announcements(
             }
         }
 
+        log::debug!(
+            "Checked all RSS feeds, waiting {} seconds before trying again",
+            check_interval.as_secs()
+        );
         tokio::time::sleep(check_interval).await;
     }
 }

@@ -124,7 +124,7 @@ async fn handle_event(
                 .change_context(EventError::ReactionError)?;
         }
         Event::GatewayHello(_) => {
-            log::info!("Connected to Discord gateway");
+            log::debug!("Connected to Discord gateway");
         }
         _ => {}
     }
