@@ -1,4 +1,4 @@
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqlitePoolOptions},
     SqlitePool,
@@ -31,7 +31,6 @@ async fn main() -> Result<(), ApplicationError> {
 
     // connect to sqlite database
     let connection_options = SqliteConnectOptions::from_str(&config.database_url)
-        .into_report()
         .change_context(ApplicationError::LoadConfig)
         .attach(ConfigError::ParseError {
             config_option: "DATABASE_URL".to_string(),
@@ -40,7 +39,6 @@ async fn main() -> Result<(), ApplicationError> {
     let pool = SqlitePoolOptions::new()
         .connect_with(connection_options)
         .await
-        .into_report()
         .change_context(ApplicationError::Database(DatabaseError::ConnectError))?;
     log::info!(
         "Connected to sqlite database with {} connections",
@@ -95,14 +93,12 @@ async fn main() -> Result<(), ApplicationError> {
                     config.clone(),
                 ))
                 .await
-                .into_report()
                 .change_context(ApplicationError::Thread)?
                 .change_context(ApplicationError::Event)?;
             }
             Err(source) => {
                 if source.is_fatal() {
                     return Err(source)
-                        .into_report()
                         .change_context(ApplicationError::Discord(DiscordError::ConnectError))?;
                 }
             }

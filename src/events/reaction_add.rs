@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use error_stack::{IntoReport, Report, ResultExt};
+use error_stack::{Report, Result, ResultExt};
 use sqlx::SqlitePool;
 use twilight_http::Client;
 use twilight_model::{
@@ -21,7 +21,7 @@ pub async fn reaction_add(
     http: Arc<Client>,
     pool: SqlitePool,
     config: Arc<ApplicationConfig>,
-) -> Result<(), Report<ReactionError>> {
+) -> Result<(), ReactionError> {
     // ensure that message was in a server we are tracking
     // if we are not tracking a server id, then we default to
     // accepting this incoming event
@@ -37,7 +37,6 @@ pub async fn reaction_add(
     let mut pool = pool
         .acquire()
         .await
-        .into_report()
         .change_context(ReactionError::DatabaseConnect)?;
 
     let message_id = added.message_id.to_string();
@@ -52,11 +51,10 @@ WHERE message_id = ?
     )
     .fetch_optional(&mut *pool)
     .await
-    .into_report()
+    .map_err(Report::new)
     .change_context(ReactionError::PreviousReactionCount)?
     .map(|id| -> std::result::Result<u64, _> { id.starboard_id.try_into() })
     .transpose()
-    .into_report()
     .change_context(ReactionError::PreviousReactionCount)?
     .map(Id::new);
 
@@ -64,11 +62,9 @@ WHERE message_id = ?
     let message = http
         .message(added.channel_id, added.message_id)
         .await
-        .into_report()
         .change_context(ReactionError::RetrieveMessage)?
         .model()
         .await
-        .into_report()
         .change_context(ReactionError::RetrieveMessage)?;
 
     // check if we are above the config `reaction_requirement` threshold
@@ -88,13 +84,10 @@ WHERE message_id = ?
 
         http.update_message(config.starboard_channel_id, starboard_message_id)
             .content(Some(&new_message.content))
-            .into_report()
             .change_context(ReactionError::ContentResponseTooLong)?
             .embeds(Some(&new_message.embeds))
-            .into_report()
             .change_context(ReactionError::StarboardMessage)?
             .await
-            .into_report()
             .change_context(ReactionError::StarboardMessage)?;
 
         return Ok(());
@@ -110,17 +103,13 @@ WHERE message_id = ?
     let starboard_message = http
         .create_message(config.starboard_channel_id)
         .content(&starboard_message.content)
-        .into_report()
         .change_context(ReactionError::ContentResponseTooLong)?
         .embeds(&starboard_message.embeds)
-        .into_report()
         .change_context(ReactionError::StarboardMessage)?
         .await
-        .into_report()
         .change_context(ReactionError::StarboardMessage)?
         .model()
         .await
-        .into_report()
         .change_context(ReactionError::StarboardMessage)?;
 
     let starboard_message_id = starboard_message.id.to_string();
@@ -135,7 +124,6 @@ VALUES (?, ?)
     )
     .execute(&mut *pool)
     .await
-    .into_report()
     .change_context(ReactionError::PreviousReactionCount)?;
 
     Ok(())

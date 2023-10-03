@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use chrono::{TimeZone, Utc};
-use error_stack::{IntoReport, Report, ResultExt};
+use error_stack::{Report, ResultExt};
 use feed_rs::model::Feed;
 use sqlx::SqlitePool;
 use twilight_http::Client;
@@ -26,17 +26,14 @@ pub async fn get_channel_announcements(
         .get(url)
         .send()
         .await
-        .into_report()
-        .change_context(RssError::FetchError)?
+        .change_context(RssError::Fetch)?
         .bytes()
         .await
-        .into_report()
-        .change_context(RssError::FetchError)?;
+        .change_context(RssError::Fetch)?;
     log::debug!("Received RSS feed response, attempting to parse...");
 
-    let rss_feed = feed_rs::parser::parse_with_uri(&rss_feed[..], Some(url))
-        .into_report()
-        .change_context(RssError::ReadError)?;
+    let rss_feed =
+        feed_rs::parser::parse_with_uri(&rss_feed[..], Some(url)).change_context(RssError::Read)?;
     log::debug!("Parsed RSS response to Feed");
 
     Ok(rss_feed)
@@ -63,8 +60,8 @@ pub async fn handle_announcements(
 
             // if it was an fetch/read error, output error and move to the next feed
             if let Err(report) = &feed {
-                if matches!(report.current_context(), RssError::FetchError)
-                    || matches!(report.current_context(), RssError::ReadError)
+                if matches!(report.current_context(), RssError::Fetch)
+                    || matches!(report.current_context(), RssError::Read)
                 {
                     log::error!("Failed to fetch feed at {url}: {report:?}, ignoring error and continuing to next announcement stream");
                     continue;
@@ -77,15 +74,10 @@ pub async fn handle_announcements(
             // check updated time against database
             let updated_time = feed
                 .updated
-                .ok_or(RssError::ReadError)
-                .into_report()
+                .ok_or(RssError::Read)
                 .attach_printable("Failed to read `updated` field of returned RSS stream")?;
 
-            let mut pool = pool
-                .acquire()
-                .await
-                .into_report()
-                .change_context(RssError::DatabaseError)?;
+            let mut pool = pool.acquire().await.change_context(RssError::Database)?;
 
             let database_updated_time = sqlx::query!(
                 r#"
@@ -95,12 +87,11 @@ pub async fn handle_announcements(
             )
             .fetch_optional(&mut *pool)
             .await
-            .into_report()
-            .change_context(RssError::DatabaseError)?
+            .change_context(RssError::Database)?
             .map(|timestamp| {
                 Utc.timestamp_millis_opt(timestamp.last_updated_time)
                     .single()
-                    .ok_or(RssError::DatabaseError)
+                    .ok_or(RssError::Database)
             })
             .transpose()?;
 
@@ -120,8 +111,7 @@ pub async fn handle_announcements(
                 )
                 .execute(&mut *pool)
                 .await
-                .into_report()
-                .change_context(RssError::DatabaseError)?;
+                .change_context(RssError::Database)?;
 
                 log::info!(
                     "First time reading {} stream, not posting it's contents to avoid spam. New posts will be recorded.",
@@ -145,8 +135,7 @@ pub async fn handle_announcements(
             )
             .execute(&mut *pool)
             .await
-            .into_report()
-            .change_context(RssError::DatabaseError)?;
+            .change_context(RssError::Database)?;
 
             // if we have already processed the last event
             if database_updated_time == updated_time {
@@ -188,8 +177,7 @@ pub async fn handle_announcements(
                         Some(id) => format!("<@&{id}>"),
                         None => String::new(),
                     })
-                    .into_report()
-                    .change_context(RssError::PostError)?
+                    .change_context(RssError::Post)?
                     .embeds(&[Embed {
                         author: Some(EmbedAuthor {
                             name: entry
@@ -203,30 +191,26 @@ pub async fn handle_announcements(
                             url: None,
                         }),
                         color: Some(15844367),
-                        description: entry
-                            .content
-                            .map(|content| {
-                                content.body.map(|body| {
-                                    let mut filtered_body = body
-                                        .replace("&nbsp;", "")
-                                        .replace("<p>", "")
-                                        .replace("</p>", "\n");
+                        description: entry.content.and_then(|content| {
+                            content.body.map(|body| {
+                                let mut filtered_body = body
+                                    .replace("&nbsp;", "")
+                                    .replace("<p>", "")
+                                    .replace("</p>", "\n");
 
-                                    filtered_body.truncate(4096);
+                                filtered_body.truncate(4096);
 
-                                    filtered_body
-                                })
+                                filtered_body
                             })
-                            .flatten(),
+                        }),
                         title: entry.title.map(|title| title.content),
                         // use this instead of first() so we can take ownership of the link
-                        url: entry.links.into_iter().nth(0).map(|link| link.href),
+                        url: entry.links.into_iter().next().map(|link| link.href),
                         fields: vec![],
                         footer: None,
                         timestamp: Some(
                             Timestamp::from_micros(post_date.timestamp_micros())
-                                .into_report()
-                                .change_context(RssError::PostError)?,
+                                .change_context(RssError::Post)?,
                         ),
                         image: None,
                         kind: "rich".to_string(),
@@ -234,11 +218,9 @@ pub async fn handle_announcements(
                         thumbnail: None,
                         video: None,
                     }])
-                    .into_report()
-                    .change_context(RssError::PostError)?
+                    .change_context(RssError::Post)?
                     .await
-                    .into_report()
-                    .change_context(RssError::PostError)?;
+                    .change_context(RssError::Post)?;
             }
         }
 
