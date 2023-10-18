@@ -49,7 +49,10 @@ pub async fn handle_announcements(
     client: Arc<Client>,
     check_interval: Duration,
 ) -> Result<(), Report<RssError>> {
-    let web_client = reqwest::Client::new();
+    let web_client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(30))
+        .build()
+        .expect("Failed to create web client");
 
     loop {
         log::debug!("Checking for new announcements");

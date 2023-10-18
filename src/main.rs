@@ -72,6 +72,8 @@ async fn main() -> Result<(), ApplicationError> {
                 handle_announcements(announcement_urls, pool, client, check_interval).await;
             if let Err(report) = result {
                 log::error!("RSS task failed: {report:?}");
+            } else {
+                log::debug!("RSS announcement thread completed with Ok variant");
             }
         });
     }
