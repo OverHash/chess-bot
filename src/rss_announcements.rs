@@ -185,17 +185,23 @@ pub async fn handle_announcements(
                     .embeds(&[Embed {
                         author: Some(EmbedAuthor {
                             name: format!(
-                                "{} {}",
+                                "{} ({})",
                                 entry
                                     .authors
                                     .into_iter()
                                     .map(|author| author.name)
                                     .collect::<Vec<String>>()
                                     .join(", "),
-                                entry
-                                    .title
+                                // a feed title will typically be like
+                                // CLASS_NAME CLASS_NUMBER: Long Class Description announcements feed
+                                feed.title
                                     .clone()
-                                    .map(|title| title.content)
+                                    .map(|title| title
+                                        .content
+                                        .split(' ')
+                                        .take(2)
+                                        .collect::<Vec<_>>()
+                                        .join(" "))
                                     .unwrap_or(entry.id)
                             ),
                             icon_url: None,
