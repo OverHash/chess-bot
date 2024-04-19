@@ -172,8 +172,9 @@ pub async fn handle_announcements(
                         .title
                         .clone()
                         .map(|title| title.content)
-                        .unwrap_or(entry.id)
+                        .unwrap_or(entry.id.clone())
                 );
+
                 client
                     .create_message(channel.to_owned())
                     .content(&match role_id {
@@ -183,12 +184,20 @@ pub async fn handle_announcements(
                     .change_context(RssError::Post)?
                     .embeds(&[Embed {
                         author: Some(EmbedAuthor {
-                            name: entry
-                                .authors
-                                .into_iter()
-                                .map(|author| author.name)
-                                .collect::<Vec<String>>()
-                                .join(", "),
+                            name: format!(
+                                "{} {}",
+                                entry
+                                    .authors
+                                    .into_iter()
+                                    .map(|author| author.name)
+                                    .collect::<Vec<String>>()
+                                    .join(", "),
+                                entry
+                                    .title
+                                    .clone()
+                                    .map(|title| title.content)
+                                    .unwrap_or(entry.id)
+                            ),
                             icon_url: None,
                             proxy_icon_url: None,
                             url: None,
