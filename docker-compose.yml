@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  chess-bot:
+    build: .
+    restart: on-failure
+
+  init-db:
+    image: "rust:1.74.0-slim-bookworm"
+    command:
+      - "/bin/sh"
+      - "-c"
+      - cargo install sqlx-cli --no-default-features --features rustls,sqlite
+        && sqlx database setup
+    depends_on:
+      - chess-bot
+    environment:
+      - DATABASE_URL=sqlite://db.sqlite
+    volumes:
+      - "./migrations:/migrations"

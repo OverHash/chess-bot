@@ -1,0 +1,6 @@
+target/
+tests/
+Dockerfile
+scripts/
+migrations/
+.github/
