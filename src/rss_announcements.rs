@@ -198,10 +198,11 @@ pub async fn handle_announcements(
                                     .clone()
                                     .map(|title| title
                                         .content
-                                        .split(' ')
-                                        .take(2)
-                                        .collect::<Vec<_>>()
-                                        .join(" "))
+                                        .split(':')
+                                        .next()
+                                        .to_owned()
+                                        .unwrap_or("Unknown class")
+                                        .to_owned())
                                     .unwrap_or(entry.id)
                             ),
                             icon_url: None,
