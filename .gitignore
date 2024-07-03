@@ -6,6 +6,8 @@
 
 # database-specific
 db.sqlite
+db.sqlite-shm
+db.sqlite-wal
 
 # editor-specific
 .vscode/

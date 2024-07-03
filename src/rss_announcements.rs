@@ -84,8 +84,8 @@ pub async fn handle_announcements(
 
             let database_updated_time = sqlx::query!(
                 r#"
-						SELECT last_updated_time FROM announcement_feed WHERE id = ?
-						"#,
+				SELECT last_updated_time FROM announcement_feed WHERE id = ?
+				"#,
                 feed.id
             )
             .fetch_optional(&mut *pool)
@@ -212,14 +212,11 @@ pub async fn handle_announcements(
                         color: Some(15844367),
                         description: entry.content.and_then(|content| {
                             content.body.map(|body| {
-                                let mut filtered_body = body
-                                    .replace("&nbsp;", "")
-                                    .replace("<p>", "")
-                                    .replace("</p>", "\n");
-
-                                filtered_body.truncate(4096);
-
-                                filtered_body
+                                // `body` may either be text or html
+                                // if it is html, we need to parse it to discord markdown
+                                let mut parsed_body = html2md::parse_html(&body);
+                                parsed_body.truncate(4096);
+                                parsed_body
                             })
                         }),
                         title: entry.title.map(|title| title.content),
