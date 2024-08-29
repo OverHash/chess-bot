@@ -1,23 +1,23 @@
 [package]
 name = "chess-bot"
 description = "A bot to manage the <Chess /> Discord server"
-version = "1.1.9"
+version = "1.2.0"
 edition = "2021"
 
 [dependencies]
 chrono = "0.4.31"
 dotenvy = "0.15.7"
-env_logger = "0.11.3"
-error-stack = "0.4.1"
-feed-rs = "1.4.0"
+env_logger = "0.11.5"
+error-stack = "0.5.0"
+feed-rs = "2.1.0"
 futures = "0.3.28"
 html2md = "0.2.14"
-log = "0.4.20"
-reqwest = { version = "0.12.4", default-features = false, features = [
+log = "0.4.22"
+reqwest = { version = "0.12.7", default-features = false, features = [
 	"rustls-tls",
 ] }
-sqlx = { version = "0.7.2", features = ["sqlite", "runtime-tokio-rustls"] }
-tokio = { version = "1.33.0", features = ["full"] }
+sqlx = { version = "0.8.1", features = ["sqlite", "runtime-tokio-rustls"] }
+tokio = { version = "1.39.3", features = ["full"] }
 twilight-cache-inmemory = "0.15.4"
 twilight-gateway = "0.15.4"
 twilight-http = "0.15.4"

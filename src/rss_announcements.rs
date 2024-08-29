@@ -3,6 +3,7 @@ use std::{sync::Arc, time::Duration};
 use chrono::{TimeZone, Utc};
 use error_stack::{Report, ResultExt};
 use feed_rs::model::Feed;
+use log::debug;
 use sqlx::SqlitePool;
 use twilight_http::Client;
 use twilight_model::{
@@ -32,8 +33,11 @@ pub async fn get_channel_announcements(
         .change_context(RssError::Fetch)?;
     log::debug!("Received RSS feed response, attempting to parse...");
 
-    let rss_feed =
-        feed_rs::parser::parse_with_uri(&rss_feed[..], Some(url)).change_context(RssError::Read)?;
+    let rss_feed = feed_rs::parser::Builder::new()
+        .base_uri(Some(url))
+        .build()
+        .parse(&rss_feed[..])
+        .change_context(RssError::Read)?;
     log::debug!("Parsed RSS response to Feed");
 
     Ok(rss_feed)
@@ -77,6 +81,12 @@ pub async fn handle_announcements(
             // check updated time against database
             let updated_time = feed
                 .updated
+                .or_else(|| {
+                    // try read the first entry
+                    // and read the `updated` time from there
+					debug!("feed at url {url} did not have a direct `updated` time. using first entry `updated` time");
+                    return feed.entries.first().map(|e| e.published).flatten();
+                })
                 .ok_or(RssError::Read)
                 .attach_printable("Failed to read `updated` field of returned RSS stream")?;
 
