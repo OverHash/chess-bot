@@ -220,15 +220,25 @@ pub async fn handle_announcements(
                             url: None,
                         }),
                         color: Some(15844367),
-                        description: entry.content.and_then(|content| {
-                            content.body.map(|body| {
+                        description: entry
+                            .content
+                            .and_then(|content| {
+                                content.body.map(|body| {
+                                    // `body` may either be text or html
+                                    // if it is html, we need to parse it to discord markdown
+                                    let mut parsed_body = html2md::parse_html(&body);
+                                    parsed_body.truncate(4096);
+                                    parsed_body
+                                })
+                            })
+                            // if there was no main `entry.content`, we look to `entry.summary` instead
+                            .or(entry.summary.map(|summary| summary.content).map(|body| {
                                 // `body` may either be text or html
                                 // if it is html, we need to parse it to discord markdown
                                 let mut parsed_body = html2md::parse_html(&body);
                                 parsed_body.truncate(4096);
                                 parsed_body
-                            })
-                        }),
+                            })),
                         title: entry.title.map(|title| title.content),
                         // use this instead of first() so we can take ownership of the link
                         url: entry.links.into_iter().next().map(|link| link.href),
