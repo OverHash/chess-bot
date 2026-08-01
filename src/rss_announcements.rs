@@ -28,6 +28,8 @@ pub async fn get_channel_announcements(
         .send()
         .await
         .change_context(RssError::Fetch)?
+        .error_for_status()
+        .change_context(RssError::Fetch)?
         .bytes()
         .await
         .change_context(RssError::Fetch)?;
@@ -55,6 +57,11 @@ pub async fn handle_announcements(
 ) -> Result<(), Report<RssError>> {
     let web_client = reqwest::Client::builder()
         .timeout(Duration::from_secs(30))
+        .user_agent(concat!(
+            env!("CARGO_PKG_NAME"),
+            "/",
+            env!("CARGO_PKG_VERSION")
+        ))
         .build()
         .expect("Failed to create web client");
 
