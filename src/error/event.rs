@@ -1,6 +1,7 @@
-use std::fmt::{self, Display, Formatter};
-
-use error_stack::Context;
+use std::{
+    error::Error,
+    fmt::{self, Display, Formatter},
+};
 
 /// Errors associated when handling a Discord event
 #[derive(Debug)]
@@ -23,4 +24,4 @@ impl Display for EventError {
     }
 }
 
-impl Context for EventError {}
+impl Error for EventError {}

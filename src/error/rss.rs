@@ -1,6 +1,4 @@
-use std::fmt::Display;
-
-use error_stack::Context;
+use std::{error::Error, fmt::Display};
 
 #[derive(Debug)]
 pub enum RssError {
@@ -25,4 +23,4 @@ impl Display for RssError {
     }
 }
 
-impl Context for RssError {}
+impl Error for RssError {}

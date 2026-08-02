@@ -1,6 +1,6 @@
 use std::{env, time::Duration};
 
-use error_stack::{Result, ResultExt};
+use error_stack::{Report, ResultExt};
 use twilight_model::id::{
     marker::{ChannelMarker, GuildMarker, RoleMarker},
     Id,
@@ -32,7 +32,7 @@ pub struct ApplicationConfig {
 }
 
 /// Loads the specified environment variable, returning `Ok` with the env variable if found, or `Err` if it was not found.
-fn load_env(env_var: &str) -> Result<String, ConfigError> {
+fn load_env(env_var: &str) -> Result<String, Report<ConfigError>> {
     let variable = env::var(env_var).change_context(ConfigError::EnvError {
         env_name: env_var.to_string(),
     })?;
@@ -42,7 +42,7 @@ fn load_env(env_var: &str) -> Result<String, ConfigError> {
 
 impl ApplicationConfig {
     /// Loads all environment variables, returning `Err` if one was missing.
-    pub fn load() -> Result<Self, ConfigError> {
+    pub fn load() -> Result<Self, Report<ConfigError>> {
         let discord_token = load_env("DISCORD_TOKEN")?;
         let database_url = load_env("DATABASE_URL")?;
         let reaction_requirement = load_env("REACTION_REQUIREMENT")?
@@ -83,7 +83,7 @@ impl ApplicationConfig {
                             .zip(channel_id)
                             .map(|(url, channel_id)| (url, channel_id, role_id))
                     }) // remove invalid lines
-                    .map(|(rss, channel_id, role_id)| {
+                    .map(|(rss, channel_id, role_id)| -> Result<Option<ParsedRssUrl>, Report<ConfigError>> {
                         // attempt to parse the channel id and create channel marker
                         let channel_id =
                             channel_id

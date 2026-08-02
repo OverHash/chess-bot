@@ -1,6 +1,7 @@
-use std::fmt::{self, Display, Formatter};
-
-use error_stack::Context;
+use std::{
+    error::Error,
+    fmt::{self, Display, Formatter},
+};
 
 #[derive(Debug)]
 pub enum ConfigError {
@@ -21,4 +22,4 @@ impl Display for ConfigError {
     }
 }
 
-impl Context for ConfigError {}
+impl Error for ConfigError {}

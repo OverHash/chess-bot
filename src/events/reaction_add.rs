@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use error_stack::{Report, Result, ResultExt};
+use error_stack::{Report, ResultExt};
 use sqlx::SqlitePool;
 use twilight_http::Client;
 use twilight_model::{
@@ -21,7 +21,7 @@ pub async fn reaction_add(
     http: Arc<Client>,
     pool: SqlitePool,
     config: Arc<ApplicationConfig>,
-) -> Result<(), ReactionError> {
+) -> Result<(), Report<ReactionError>> {
     // ensure that message was in a server we are tracking
     // if we are not tracking a server id, then we default to
     // accepting this incoming event
@@ -51,7 +51,6 @@ WHERE message_id = ?
     )
     .fetch_optional(&mut *pool)
     .await
-    .map_err(Report::new)
     .change_context(ReactionError::PreviousReactionCount)?
     .map(|id| -> std::result::Result<u64, _> { id.starboard_id.try_into() })
     .transpose()

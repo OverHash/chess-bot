@@ -1,4 +1,4 @@
-use error_stack::{Result, ResultExt};
+use error_stack::{Report, ResultExt};
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqlitePoolOptions},
     SqlitePool,
@@ -20,7 +20,7 @@ use error::{ApplicationError, ConfigError, DatabaseError, DiscordError, EventErr
 use crate::rss_announcements::handle_announcements;
 
 #[tokio::main]
-async fn main() -> Result<(), ApplicationError> {
+async fn main() -> Result<(), Report<ApplicationError>> {
     // load `.env` file (if it exists) and subsequent config file into memory
     dotenvy::dotenv().ok();
 
@@ -32,7 +32,7 @@ async fn main() -> Result<(), ApplicationError> {
     // connect to sqlite database
     let connection_options = SqliteConnectOptions::from_str(&config.database_url)
         .change_context(ApplicationError::LoadConfig)
-        .attach(ConfigError::ParseError {
+        .attach_opaque(ConfigError::ParseError {
             config_option: "DATABASE_URL".to_string(),
         })?
         .create_if_missing(true);
@@ -113,7 +113,7 @@ async fn handle_event(
     http: Arc<Client>,
     pool: SqlitePool,
     config: Arc<ApplicationConfig>,
-) -> Result<(), EventError> {
+) -> Result<(), Report<EventError>> {
     match event {
         Event::ReactionAdd(added) => {
             log::debug!("Received ReactionAdd event to message {}", added.message_id);

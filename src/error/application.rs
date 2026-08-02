@@ -1,6 +1,7 @@
-use std::fmt::{self};
-
-use error_stack::Context;
+use std::{
+    error::Error,
+    fmt::{self},
+};
 
 use super::{DatabaseError, DiscordError};
 
@@ -14,7 +15,7 @@ pub enum ApplicationError {
     Thread,
 }
 
-impl Context for ApplicationError {}
+impl Error for ApplicationError {}
 
 impl fmt::Display for ApplicationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

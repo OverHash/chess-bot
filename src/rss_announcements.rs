@@ -95,7 +95,7 @@ pub async fn handle_announcements(
                     return feed.entries.first().map(|e| e.published).flatten();
                 })
                 .ok_or(RssError::Read)
-                .attach_printable("Failed to read `updated` field of returned RSS stream")?;
+                .attach("Failed to read `updated` field of returned RSS stream")?;
 
             let mut pool = pool.acquire().await.change_context(RssError::Database)?;
 

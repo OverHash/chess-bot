@@ -6,11 +6,11 @@ services:
     restart: on-failure
 
   init-db:
-    image: "rust:1.74.0-slim-bookworm"
+    image: "rust:1.97.1-slim-bookworm"
     command:
       - "/bin/sh"
       - "-c"
-      - cargo install sqlx-cli --no-default-features --features rustls,sqlite
+      - cargo install sqlx-cli --no-default-features --features sqlite
         && sqlx database setup
     depends_on:
       - chess-bot

@@ -8,15 +8,13 @@ edition = "2021"
 chrono = "0.4.31"
 dotenvy = "0.15.7"
 env_logger = "0.11.5"
-error-stack = "0.5.0"
+error-stack = "0.8.0"
 feed-rs = "2.1.0"
 futures = "0.3.28"
 html2md = "0.2.14"
 log = "0.4.22"
-reqwest = { version = "0.12.7", default-features = false, features = [
-	"rustls-tls",
-] }
-sqlx = { version = "0.8.1", features = ["sqlite", "runtime-tokio-rustls"] }
+reqwest = { version = "0.13.4", default-features = false, features = ["rustls"] }
+sqlx = { version = "0.9.0", features = ["sqlite", "runtime-tokio"] }
 tokio = { version = "1.39.3", features = ["full"] }
 twilight-cache-inmemory = "0.15.4"
 twilight-gateway = "0.15.4"

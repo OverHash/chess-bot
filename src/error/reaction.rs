@@ -1,6 +1,7 @@
-use std::fmt::{self, Display, Formatter};
-
-use error_stack::Context;
+use std::{
+    error::Error,
+    fmt::{self, Display, Formatter},
+};
 
 #[derive(Debug)]
 pub enum ReactionError {
@@ -32,4 +33,4 @@ impl Display for ReactionError {
     }
 }
 
-impl Context for ReactionError {}
+impl Error for ReactionError {}
